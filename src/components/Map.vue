@@ -9,6 +9,11 @@ const plot = ref(null)
 
 defineExpose({ plot })
 
+const minX = -100
+const maxX = 100
+const minY = -100
+const maxY = 100
+
 const plotData = [
   {
     z: [],
@@ -26,11 +31,13 @@ const plotData = [
 const plotLayout = {
   title: 'Ada Realm Market Map',
   xaxis: {
+    range: [minX, maxX],
     fixedrange: true,
     zeroline: false,
     dtick: 25,
   },
   yaxis: {
+    range: [maxY, minY],
     fixedrange: true,
     zeroline: false,
     dtick: 25,
@@ -41,10 +48,6 @@ const plotConfig = {
   displayModeBar: false,
 }
 
-const minX = -100
-const maxX = 100
-const minY = -100
-const maxY = 100
 const itemPerPage = 24
 const priceMul = 1000000
 
