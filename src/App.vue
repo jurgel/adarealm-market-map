@@ -8,7 +8,7 @@ import Map from './components/Map.vue'
   <div>
     <Map />
 
-    <div class="max-w-lg mx-auto mt-16 mb-8 text-center">
+    <div class="max-w-lg mx-auto mt-16 mb-8 px-2 text-center">
       <h1
         class="text-base text-indigo-600 font-semibold tracking-wide uppercase"
       >
@@ -22,7 +22,9 @@ import Map from './components/Map.vue'
           <img src="./assets/donation_qr.png" class="max-h-24" />
         </div>
         <div class="my-2">
-          addr1qyf86ddk8hntejeducer7gdq4sh3k880t3n8nuvmv78w22hh3m2e0adnurjvlnpe0zmez982l0nkvacnjlwg9knytvvqkdfyyp
+          <p class="break-all select-all">
+            addr1qyf86ddk8hntejeducer7gdq4sh3k880t3n8nuvmv78w22hh3m2e0adnurjvlnpe0zmez982l0nkvacnjlwg9knytvvqkdfyyp
+          </p>
         </div>
       </div>
     </div>

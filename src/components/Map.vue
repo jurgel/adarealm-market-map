@@ -28,12 +28,12 @@ const plotLayout = {
   xaxis: {
     fixedrange: true,
     zeroline: false,
-    dtick: 20,
+    dtick: 25,
   },
   yaxis: {
     fixedrange: true,
     zeroline: false,
-    dtick: 20,
+    dtick: 25,
   },
 }
 
@@ -49,7 +49,7 @@ const itemPerPage = 24
 const priceMul = 1000000
 
 let priceMin = ref(1)
-let priceMax = ref(30)
+let priceMax = ref(50)
 //let saleTypes = ["listing", "offer", "auction"];
 let saleTypeListing = ref(true)
 let saleTypeOffer = ref(true)
@@ -64,6 +64,7 @@ let curSaleTypeOffer = saleTypeOffer.value
 let curSaleTypeAuction = saleTypeAuction.value
 let curFeatureSmartContract = featureSmartContract.value
 
+let loadingItemCount = ref(0)
 let loadingPage = ref(1)
 let loadingMaxPage = ref(0)
 
@@ -112,6 +113,7 @@ const loadCnftAll = function (requestId, page) {
         response.data &&
         response.data.results
       ) {
+        loadingItemCount.value = response.data.count
         loadingMaxPage.value = Math.ceil(response.data.count / itemPerPage)
 
         response.data.results.forEach((el) => {
@@ -176,11 +178,11 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto my-8">
-    <div class="max-w-lg mx-auto">
+    <div class="max-w-lg mx-auto px-2">
       <div class="my-4">
         <div class="text-base font-medium text-gray-900">Price Range</div>
         <div class="flex items-center justify-between">
-          <div>
+          <div class="mr-1">
             <label
               for="min-price"
               class="block text-sm font-medium text-gray-700"
@@ -194,7 +196,7 @@ onMounted(() => {
               class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
             />
           </div>
-          <div>
+          <div class="ml-1">
             <label
               for="max-price"
               class="block text-sm font-medium text-gray-700"
@@ -293,16 +295,21 @@ onMounted(() => {
 
       <div class="my-4">
         <p v-if="loadingMaxPage > 0" class="text-center text-sm text-gray-500">
-          {{ loadingPage }} / {{ loadingMaxPage }}
+          {{ loadingItemCount }} Assets | Page {{ loadingPage }} of
+          {{ loadingMaxPage }}
         </p>
       </div>
     </div>
 
-    <div id="plot" ref="plot" class="plot mx-auto"></div>
+    <div
+      id="plot"
+      ref="plot"
+      class="mx-auto aspect-square object-contain max-h-screen max-w-full"
+    ></div>
 
-    <div class="max-w-lg mx-auto">
+    <div class="max-w-lg mx-auto px-2">
       <p class="my-2 text-sm text-gray-500 text-center">
-        Currently all market data are from CNFT.IO
+        Market data from CNFT.IO
       </p>
     </div>
   </div>
