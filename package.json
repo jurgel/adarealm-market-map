@@ -13,7 +13,8 @@
     "axios": "^0.24.0",
     "plotly.js-dist-min": "^2.8.1",
     "vue": "^3.2.25",
-    "vue-axios": "^3.4.0"
+    "vue-axios": "^3.4.0",
+    "vue-gtag-next": "^1.14.0"
   },
   "devDependencies": {
     "@headlessui/vue": "^1.4.2",
