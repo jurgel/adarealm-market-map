@@ -42,6 +42,19 @@ const plotLayout = {
     zeroline: false,
     dtick: 25,
   },
+  images: [
+    {
+      source: './src/assets/adarealm_map.png',
+      xref: 'x',
+      yref: 'y',
+      x: -131,
+      y: -106,
+      sizex: 235,
+      sizey: 235,
+      sizing: 'stretch',
+      layer: 'below',
+    },
+  ],
 }
 
 const plotConfig = {
