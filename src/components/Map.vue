@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import Plotly from 'plotly.js-dist-min'
 import axios from 'axios'
+import adarealm_map from '../assets/adarealm_map.png'
 
 defineProps({})
 
@@ -44,7 +45,7 @@ const plotLayout = {
   },
   images: [
     {
-      source: './src/assets/adarealm_map.png',
+      source: adarealm_map,
       xref: 'x',
       yref: 'y',
       x: -131,
