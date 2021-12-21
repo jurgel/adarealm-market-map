@@ -39,10 +39,25 @@ const plotData = [
     type: 'scatter',
     marker: {
       size: 6,
-      color: 'rgb(204, 0, 255)',
+      color: 'rgb(153, 102, 255)',
     },
     hovertemplate:
-      '<b>%{text.name}</b><br><br>Plot %{x}, %{y}' + '<extra></extra>',
+      '<b>%{text.name}</b><br><br>Plot %{x}, %{y}<br>Address 1' +
+      '<extra></extra>',
+  },
+  {
+    x: [],
+    y: [],
+    text: [],
+    mode: 'markers',
+    type: 'scatter',
+    marker: {
+      size: 6,
+      color: 'rgb(255, 102, 102)',
+    },
+    hovertemplate:
+      '<b>%{text.name}</b><br><br>Plot %{x}, %{y}<br>Address 2' +
+      '<extra></extra>',
   },
   {
     x: [],
@@ -61,6 +76,7 @@ const plotData = [
 
 const plotLayout = {
   title: 'Ada Realm Map',
+  showlegend: false,
   xaxis: {
     range: [minX, maxX],
     fixedrange: true,
@@ -118,7 +134,8 @@ let saleTypeListing = ref(true)
 let saleTypeOffer = ref(true)
 let saleTypeAuction = ref(false)
 let featureSmartContract = ref(false)
-let walletAddress = ref('')
+let walletAddress1 = ref('')
+let walletAddress2 = ref('')
 let coordId = ref('')
 let coordX = ref(0)
 let coordY = ref(0)
@@ -134,7 +151,8 @@ let curFeatureSmartContract = featureSmartContract.value
 let loadingItemCount = ref(0)
 let loadingPage = ref(1)
 let loadingMaxPage = ref(0)
-let walletAssetCount = ref(0)
+let wallet1AssetCount = ref(0)
+let wallet2AssetCount = ref(0)
 
 for (var i = minX; i <= maxX; i++) {
   plotData[0].x.push(i)
@@ -145,9 +163,9 @@ for (var i = minY; i <= maxY; i++) {
 }
 
 const resetCoord = function () {
-  plotData[2].x = []
-  plotData[2].y = []
-  plotData[2].text = []
+  plotData[3].x = []
+  plotData[3].y = []
+  plotData[3].text = []
 }
 
 watch([coordX, coordY], (val) => {
@@ -157,9 +175,9 @@ watch([coordX, coordY], (val) => {
   if (id) {
     coordId.value = 'AdaRealmPlot' + id
 
-    plotData[2].x.push(val[0])
-    plotData[2].y.push(val[1])
-    plotData[2].text.push({
+    plotData[3].x.push(val[0])
+    plotData[3].y.push(val[1])
+    plotData[3].text.push({
       type: 'coord',
       name: coordId.value,
     })
@@ -273,54 +291,65 @@ const loadMarketData = function () {
   loadCnft(curRequestId, 1)
 }
 
-const apiPoolWallet = function () {
-  return axios.get('https://pool.pm/wallet/' + walletAddress.value)
+const apiPoolWallet = function (walletAddress) {
+  return axios.get('https://pool.pm/wallet/' + walletAddress)
 }
 
-const loadPoolWallet = function () {
-  walletAssetCount.value = 0
-  if (walletAddress.value.length > 0) {
-    apiPoolWallet()
-      .then((response) => {
-        if (response && response.data && response.data.tokens) {
-          response.data.tokens.forEach((el) => {
-            if (el.policy === adarealmPolicy) {
-              const ty = el.metadata.Coordinates.y
-              const tx = el.metadata.Coordinates.x
-              plotData[1].y.push(ty)
-              plotData[1].x.push(tx)
-              plotData[1].text.push({
-                type: 'pool',
-                name: el.name,
-              })
+const loadPoolWallet = function (walletId, walletAddress) {
+  apiPoolWallet(walletAddress)
+    .then((response) => {
+      if (response && response.data && response.data.tokens) {
+        response.data.tokens.forEach((el) => {
+          if (el.policy === adarealmPolicy) {
+            const ty = el.metadata.Coordinates.y
+            const tx = el.metadata.Coordinates.x
+            plotData[walletId].y.push(ty)
+            plotData[walletId].x.push(tx)
+            plotData[walletId].text.push({
+              type: 'pool',
+              name: el.name,
+            })
+          }
+        })
 
-              walletAssetCount.value++
-            }
-          })
-
-          Plotly.redraw('plot')
+        if (walletId === 1) {
+          wallet1AssetCount.value = plotData[walletId].x.length
+        } else if (walletId === 2) {
+          wallet2AssetCount.value = plotData[walletId].x.length
         }
-      })
-      .catch((error) => {
-        console.log(error)
-      })
-  }
+
+        Plotly.redraw('plot')
+      }
+    })
+    .catch((error) => {
+      console.log(error)
+    })
 }
 
-const resetWalletData = function () {
-  plotData[1].y = []
-  plotData[1].x = []
+const resetWalletData = function (walletId) {
+  plotData[walletId].x = []
+  plotData[walletId].y = []
+  plotData[walletId].text = []
 }
 
 const loadWalletData = function () {
-  resetWalletData()
-  loadPoolWallet()
+  resetWalletData(1)
+  resetWalletData(2)
+
+  if (walletAddress1.value.length > 0) {
+    loadPoolWallet(1, walletAddress1.value)
+  }
+
+  if (walletAddress2.value.length > 0) {
+    loadPoolWallet(2, walletAddress2.value)
+  }
 }
 
 const clearMap = function () {
   curRequestId++
   resetMarketData()
-  resetWalletData()
+  resetWalletData(1)
+  resetWalletData(2)
   resetCoord()
 
   Plotly.redraw('plot')
@@ -401,17 +430,31 @@ onMounted(() => {
     <div class="max-w-lg mx-auto px-2">
       <div class="my-4">
         <div class="text-base font-medium text-gray-900">Wallet</div>
-        <div class="">
+        <div>
           <label
-            for="wallet-address"
+            for="wallet-address-1"
             class="block text-sm font-medium text-gray-700"
           >
-            Address
+            Address 1
           </label>
           <input
-            v-model="walletAddress"
+            v-model="walletAddress1"
             type="text"
-            name="wallet-address"
+            name="wallet-address-1"
+            class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+          />
+        </div>
+        <div class="mt-2">
+          <label
+            for="wallet-address-2"
+            class="block text-sm font-medium text-gray-700"
+          >
+            Address 2
+          </label>
+          <input
+            v-model="walletAddress2"
+            type="text"
+            name="wallet-address-2"
             class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
           />
         </div>
@@ -421,7 +464,7 @@ onMounted(() => {
         <button
           type="button"
           class="w-full bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-white disabled:text-gray-400 disabled:border-slate-200"
-          :disabled="walletAddress.length <= 0"
+          :disabled="walletAddress1.length <= 0"
           @click="loadWalletData"
         >
           Load Wallet
@@ -430,10 +473,13 @@ onMounted(() => {
 
       <div class="my-4">
         <p
-          v-if="walletAssetCount > 0"
+          v-if="wallet1AssetCount > 0"
           class="text-center text-sm text-gray-500"
         >
-          {{ walletAssetCount }} Assets
+          {{ wallet1AssetCount }} Assets
+          <span v-if="wallet2AssetCount > 0">
+            | {{ wallet2AssetCount }} Assets
+          </span>
         </p>
       </div>
     </div>
