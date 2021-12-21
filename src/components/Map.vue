@@ -448,7 +448,8 @@ onMounted(() => {
 
     <div class="max-w-lg mx-auto px-2">
       <p class="my-2 text-sm text-gray-500 text-center">
-        Market data from CNFT.IO
+        Market data from CNFT.IO<br />
+        Wallet data from pool.pm
       </p>
     </div>
   </div>
