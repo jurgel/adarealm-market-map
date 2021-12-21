@@ -1,8 +1,10 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import Plotly from 'plotly.js-dist-min'
 import axios from 'axios'
 import adarealm_map from '../assets/adarealm_map.png'
+import adarealm_id_to_coord from '../assets/adarealm_id_to_coord.json'
+import adarealm_coord_to_id from '../assets/adarealm_coord_to_id.json'
 
 defineProps({})
 
@@ -38,6 +40,19 @@ const plotData = [
     marker: {
       size: 6,
       color: 'rgb(204, 0, 255)',
+    },
+    hovertemplate:
+      '<b>%{text.name}</b><br><br>Plot %{x}, %{y}' + '<extra></extra>',
+  },
+  {
+    x: [],
+    y: [],
+    text: [],
+    mode: 'markers',
+    type: 'scatter',
+    marker: {
+      size: 6,
+      color: 'rgb(0, 0, 0)',
     },
     hovertemplate:
       '<b>%{text.name}</b><br><br>Plot %{x}, %{y}' + '<extra></extra>',
@@ -88,6 +103,9 @@ let saleTypeOffer = ref(true)
 let saleTypeAuction = ref(false)
 let featureSmartContract = ref(false)
 let walletAddress = ref('')
+let coordId = ref('')
+let coordX = ref(0)
+let coordY = ref(0)
 
 let curRequestId = 0
 let curPriceMin = priceMin.value
@@ -109,6 +127,45 @@ for (var i = minX; i <= maxX; i++) {
 for (var i = minY; i <= maxY; i++) {
   plotData[0].y.push(i)
 }
+
+const resetCoord = function () {
+  plotData[2].x = []
+  plotData[2].y = []
+  plotData[2].text = []
+}
+
+watch([coordX, coordY], (val) => {
+  resetCoord()
+
+  const id = adarealm_coord_to_id[val[0] + ',' + val[1]]
+  if (id) {
+    coordId.value = 'AdaRealmPlot' + id
+
+    plotData[2].x.push(val[0])
+    plotData[2].y.push(val[1])
+    plotData[2].text.push({
+      type: 'coord',
+      name: coordId.value,
+    })
+  } else {
+    coordId.value = ''
+  }
+
+  Plotly.redraw('plot')
+})
+
+watch(coordId, (val) => {
+  if (val.substring(0, 12) !== 'AdaRealmPlot') return
+  const id = parseInt(coordId.value.replace('AdaRealmPlot', ''))
+  const coord = adarealm_id_to_coord[id]
+  if (coord) {
+    coordX.value = coord[0]
+    coordY.value = coord[1]
+  } else {
+    coordX.value = 0
+    coordY.value = 0
+  }
+})
 
 const apiCnft = function (page) {
   const saleTypes = []
@@ -155,6 +212,7 @@ const loadCnft = function (requestId, page) {
           const tx = el.asset.metadata.Coordinates.x - minX
           plotData[0].z[ty][tx] = el.price / priceMul
           plotData[0].text[ty][tx] = {
+            type: 'cnft',
             id: el._id,
             name: el.asset.assetId,
           }
@@ -216,6 +274,7 @@ const loadPoolWallet = function () {
               plotData[1].y.push(ty)
               plotData[1].x.push(tx)
               plotData[1].text.push({
+                type: 'pool',
                 name: el.name,
               })
 
@@ -246,6 +305,7 @@ const clearMap = function () {
   curRequestId++
   resetMarketData()
   resetWalletData()
+  resetCoord()
 
   Plotly.redraw('plot')
 }
@@ -255,7 +315,14 @@ onMounted(() => {
 
   plot.value.on('plotly_click', function (data) {
     if (data && data.points && data.points[0] && data.points[0].text) {
-      window.open('https://cnft.io/token/' + data.points[0].text.id)
+      const type = data.points[0].text.type
+      if (type === 'cnft') {
+        window.open('https://cnft.io/token/' + data.points[0].text.id)
+      } else if (type === 'pool' || type === 'coord') {
+        window.open(
+          'https://pool.pm/' + adarealmPolicy + '.' + data.points[0].text.name
+        )
+      }
     }
   })
 })
@@ -263,6 +330,57 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto my-8">
+    <!-- Coord -->
+    <div class="max-w-lg mx-auto px-2">
+      <div class="my-4">
+        <div class="text-base font-medium text-gray-900">Coordinate</div>
+        <div class="flex items-center justify-between">
+          <div class="mr-1 flex-none w-32">
+            <label
+              for="coord-x"
+              class="block text-sm font-medium text-gray-700"
+            >
+              X
+            </label>
+            <input
+              v-model="coordX"
+              type="number"
+              name="coord-x"
+              class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            />
+          </div>
+          <div class="mx-1 flex-none w-32">
+            <label
+              for="coord-y"
+              class="block text-sm font-medium text-gray-700"
+            >
+              Y
+            </label>
+            <input
+              v-model="coordY"
+              type="number"
+              name="coord-y"
+              class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            />
+          </div>
+          <div class="ml-1">
+            <label
+              for="coord-id"
+              class="block text-sm font-medium text-gray-700"
+            >
+              ID
+            </label>
+            <input
+              v-model="coordId"
+              type="text"
+              name="coord-id"
+              class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Wallet Form -->
     <div class="max-w-lg mx-auto px-2">
       <div class="my-4">
