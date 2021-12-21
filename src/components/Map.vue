@@ -10,6 +10,8 @@ const plot = ref(null)
 
 defineExpose({ plot })
 
+const adarealmPolicy =
+  'b5240b3ae40bca2cc56b0fdfd7553724ccd18c56a98937d6b6f76265'
 const minX = -100
 const maxX = 100
 const minY = -100
@@ -27,10 +29,23 @@ const plotData = [
       '<b>%{text.name}</b><br><br>Plot %{x}, %{y}<br>Price: %{z}' +
       '<extra></extra>',
   },
+  {
+    x: [],
+    y: [],
+    text: [],
+    mode: 'markers',
+    type: 'scatter',
+    marker: {
+      size: 6,
+      color: 'rgb(204, 0, 255)',
+    },
+    hovertemplate:
+      '<b>%{text.name}</b><br><br>Plot %{x}, %{y}' + '<extra></extra>',
+  },
 ]
 
 const plotLayout = {
-  title: 'Ada Realm Market Map',
+  title: 'Ada Realm Map',
   xaxis: {
     range: [minX, maxX],
     fixedrange: true,
@@ -72,6 +87,7 @@ let saleTypeListing = ref(true)
 let saleTypeOffer = ref(true)
 let saleTypeAuction = ref(false)
 let featureSmartContract = ref(false)
+let walletAddress = ref('')
 
 let curRequestId = 0
 let curPriceMin = priceMin.value
@@ -84,6 +100,7 @@ let curFeatureSmartContract = featureSmartContract.value
 let loadingItemCount = ref(0)
 let loadingPage = ref(1)
 let loadingMaxPage = ref(0)
+let walletAssetCount = ref(0)
 
 for (var i = minX; i <= maxX; i++) {
   plotData[0].x.push(i)
@@ -93,7 +110,7 @@ for (var i = minY; i <= maxY; i++) {
   plotData[0].y.push(i)
 }
 
-const loadCnft = function (page) {
+const apiCnft = function (page) {
   const saleTypes = []
   if (curSaleTypeListing) {
     saleTypes.push('listing')
@@ -106,7 +123,7 @@ const loadCnft = function (page) {
   }
 
   return axios.post('https://api.cnft.io/market/listings', {
-    search: 'b5240b3ae40bca2cc56b0fdfd7553724ccd18c56a98937d6b6f76265',
+    search: adarealmPolicy,
     types: saleTypes,
     project: 'Ada Realm',
     sort: { _id: -1 },
@@ -120,9 +137,9 @@ const loadCnft = function (page) {
   })
 }
 
-const loadCnftAll = function (requestId, page) {
+const loadCnft = function (requestId, page) {
   loadingPage.value = page
-  loadCnft(page)
+  apiCnft(page)
     .then((response) => {
       if (
         requestId === curRequestId &&
@@ -146,7 +163,7 @@ const loadCnftAll = function (requestId, page) {
         Plotly.redraw('plot')
 
         if (page < loadingMaxPage.value) {
-          loadCnftAll(requestId, page + 1)
+          loadCnft(requestId, page + 1)
         }
       }
     })
@@ -179,7 +196,58 @@ const loadMarketData = function () {
   curFeatureSmartContract = featureSmartContract.value
 
   resetMarketData()
-  loadCnftAll(curRequestId, 1)
+  loadCnft(curRequestId, 1)
+}
+
+const apiPoolWallet = function () {
+  return axios.get('https://pool.pm/wallet/' + walletAddress.value)
+}
+
+const loadPoolWallet = function () {
+  walletAssetCount.value = 0
+  if (walletAddress.value.length > 0) {
+    apiPoolWallet()
+      .then((response) => {
+        if (response && response.data && response.data.tokens) {
+          response.data.tokens.forEach((el) => {
+            if (el.policy === adarealmPolicy) {
+              const ty = el.metadata.Coordinates.y
+              const tx = el.metadata.Coordinates.x
+              plotData[1].y.push(ty)
+              plotData[1].x.push(tx)
+              plotData[1].text.push({
+                name: el.name,
+              })
+
+              walletAssetCount.value++
+            }
+          })
+
+          Plotly.redraw('plot')
+        }
+      })
+      .catch((error) => {
+        console.log(error)
+      })
+  }
+}
+
+const resetWalletData = function () {
+  plotData[1].y = []
+  plotData[1].x = []
+}
+
+const loadWalletData = function () {
+  resetWalletData()
+  loadPoolWallet()
+}
+
+const clearMap = function () {
+  curRequestId++
+  resetMarketData()
+  resetWalletData()
+
+  Plotly.redraw('plot')
 }
 
 onMounted(() => {
@@ -195,6 +263,48 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto my-8">
+    <!-- Wallet Form -->
+    <div class="max-w-lg mx-auto px-2">
+      <div class="my-4">
+        <div class="text-base font-medium text-gray-900">Wallet</div>
+        <div class="">
+          <label
+            for="wallet-address"
+            class="block text-sm font-medium text-gray-700"
+          >
+            Address
+          </label>
+          <input
+            v-model="walletAddress"
+            type="text"
+            name="wallet-address"
+            class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+          />
+        </div>
+      </div>
+
+      <div class="my-4">
+        <button
+          type="button"
+          class="w-full bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-white disabled:text-gray-400 disabled:border-slate-200"
+          :disabled="walletAddress.length <= 0"
+          @click="loadWalletData"
+        >
+          Load Wallet
+        </button>
+      </div>
+
+      <div class="my-4">
+        <p
+          v-if="walletAssetCount > 0"
+          class="text-center text-sm text-gray-500"
+        >
+          {{ walletAssetCount }} Assets
+        </p>
+      </div>
+    </div>
+
+    <!-- Market Form -->
     <div class="max-w-lg mx-auto px-2">
       <div class="my-4">
         <div class="text-base font-medium text-gray-900">Price Range</div>
@@ -306,7 +416,7 @@ onMounted(() => {
           class="w-full bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           @click="loadMarketData"
         >
-          Search
+          Search Market
         </button>
       </div>
 
@@ -315,6 +425,18 @@ onMounted(() => {
           {{ loadingItemCount }} Assets | Page {{ loadingPage }} of
           {{ loadingMaxPage }}
         </p>
+      </div>
+    </div>
+
+    <div class="max-w-lg mx-auto px-2">
+      <div class="my-4">
+        <button
+          type="button"
+          class="w-full bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-white disabled:text-gray-400 disabled:border-slate-200"
+          @click="clearMap"
+        >
+          Clear Map
+        </button>
       </div>
     </div>
 
