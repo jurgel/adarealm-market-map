@@ -86,6 +86,22 @@ const plotLayout = {
       layer: 'below',
     },
   ],
+  shapes: [
+    {
+      line: {
+        color: 'rgb(0, 0, 0)',
+        width: 1,
+      },
+      fillcolor: 'rgba(0, 0, 0, 0.5)',
+      type: 'rect',
+      xref: 'x',
+      yref: 'y',
+      x0: 20,
+      y0: -50,
+      x1: 34,
+      y1: -36,
+    },
+  ],
 }
 
 const plotConfig = {
