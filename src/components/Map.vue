@@ -127,13 +127,13 @@ const plotConfig = {
 const itemPerPage = 24
 const priceMul = 1000000
 
-let priceMin = ref(1)
-let priceMax = ref(50)
+let priceMin = ref(1000)
+let priceMax = ref(1)
 //let saleTypes = ["listing", "offer", "auction"];
 let saleTypeListing = ref(true)
 let saleTypeOffer = ref(true)
 let saleTypeAuction = ref(false)
-let featureSmartContract = ref(false)
+let featureSmartContract = ref(true)
 let walletAddress1 = ref('')
 let walletAddress2 = ref('')
 let coordId = ref('')
@@ -201,6 +201,22 @@ watch(coordId, (val) => {
   }
 })
 
+const apiCnftInit = function () {
+  return axios.post('https://api.cnft.io/market/listings', {
+    search: adarealmPolicy,
+    types: ['listing', 'offer'],
+    project: 'Ada Realm',
+    sort: { price: 1 },
+    page: 1,
+    verified: true,
+    nsfw: false,
+    sold: false,
+    smartContract: true,
+    priceMin: null,
+    priceMax: null,
+  })
+}
+
 const apiCnft = function (page) {
   const saleTypes = []
   if (curSaleTypeListing) {
@@ -228,6 +244,42 @@ const apiCnft = function (page) {
   })
 }
 
+const initCnft = function () {
+  loadingPage.value = 1
+  apiCnftInit()
+    .then((response) => {
+      if (response && response.data && response.data.results) {
+        loadingItemCount.value = response.data.count
+        loadingMaxPage.value = Math.ceil(response.data.count / itemPerPage)
+
+        response.data.results.forEach((el) => {
+          const tprice = el.price / priceMul
+          const ty = el.assets[0].metadata.Coordinates.y - minY
+          const tx = el.assets[0].metadata.Coordinates.x - minX
+
+          if (priceMin.value > tprice) {
+            priceMin.value = tprice
+          }
+          if (priceMax.value < tprice) {
+            priceMax.value = tprice
+          }
+
+          plotData[0].z[ty][tx] = tprice
+          plotData[0].text[ty][tx] = {
+            type: 'cnft',
+            id: el._id,
+            name: el.assets[0].assetId,
+          }
+        })
+
+        Plotly.redraw('plot')
+      }
+    })
+    .catch((error) => {
+      console.log(error)
+    })
+}
+
 const loadCnft = function (requestId, page) {
   loadingPage.value = page
   apiCnft(page)
@@ -242,13 +294,13 @@ const loadCnft = function (requestId, page) {
         loadingMaxPage.value = Math.ceil(response.data.count / itemPerPage)
 
         response.data.results.forEach((el) => {
-          const ty = el.asset.metadata.Coordinates.y - minY
-          const tx = el.asset.metadata.Coordinates.x - minX
+          const ty = el.assets[0].metadata.Coordinates.y - minY
+          const tx = el.assets[0].metadata.Coordinates.x - minX
           plotData[0].z[ty][tx] = el.price / priceMul
           plotData[0].text[ty][tx] = {
             type: 'cnft',
             id: el._id,
-            name: el.asset.assetId,
+            name: el.assets[0].assetId,
           }
         })
 
@@ -276,6 +328,11 @@ const resetMarketData = function () {
       plotData[0].text[y][x] = {}
     }
   }
+}
+
+const initMarketData = function () {
+  resetMarketData()
+  initCnft()
 }
 
 const loadMarketData = function () {
@@ -370,6 +427,8 @@ onMounted(() => {
       }
     }
   })
+
+  initMarketData()
 })
 </script>
 
