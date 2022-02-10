@@ -28,7 +28,7 @@ const plotData = [
     type: 'heatmap',
     hoverongaps: false,
     hovertemplate:
-      '<b>%{text.name}</b><br><br>Plot %{x}, %{y}<br>Price: %{z}' +
+      '<b>%{text.name}</b><br><br>Plot %{x}, %{y}<br>Price: %{z}<br>Type: %{text.subtype}' +
       '<extra></extra>',
   },
   {
@@ -129,10 +129,11 @@ const priceMul = 1000000
 
 let priceMin = ref(1000)
 let priceMax = ref(1)
-//let saleTypes = ["listing", "offer", "auction"];
+//let saleTypes = ["listing", "offer", "auction", "bundle"];
 let saleTypeListing = ref(true)
 let saleTypeOffer = ref(true)
 let saleTypeAuction = ref(false)
+let saleTypeBundle = ref(false)
 let featureSmartContract = ref(true)
 let walletAddress1 = ref('')
 let walletAddress2 = ref('')
@@ -146,6 +147,7 @@ let curPriceMax = priceMax.value
 let curSaleTypeListing = saleTypeListing.value
 let curSaleTypeOffer = saleTypeOffer.value
 let curSaleTypeAuction = saleTypeAuction.value
+let curSaleTypeBundle = saleTypeBundle.value
 let curFeatureSmartContract = featureSmartContract.value
 
 let loadingItemCount = ref(0)
@@ -228,6 +230,9 @@ const apiCnft = function (page) {
   if (curSaleTypeAuction) {
     saleTypes.push('auction')
   }
+  if (curSaleTypeBundle) {
+    saleTypes.push('bundle')
+  }
 
   return axios.post('https://api.cnft.io/market/listings', {
     search: adarealmPolicy,
@@ -269,6 +274,7 @@ const initCnft = function () {
             type: 'cnft',
             id: el._id,
             name: el.assets[0].assetId,
+            subtype: el.type,
           }
         })
 
@@ -294,14 +300,23 @@ const loadCnft = function (requestId, page) {
         loadingMaxPage.value = Math.ceil(response.data.count / itemPerPage)
 
         response.data.results.forEach((el) => {
-          const ty = el.assets[0].metadata.Coordinates.y - minY
-          const tx = el.assets[0].metadata.Coordinates.x - minX
-          plotData[0].z[ty][tx] = el.price / priceMul
-          plotData[0].text[ty][tx] = {
-            type: 'cnft',
-            id: el._id,
-            name: el.assets[0].assetId,
+          const tprice = el.price / priceMul
+          let tsubtype = el.type
+          if (el.type === 'bundle') {
+            tsubtype += '|' + el._id.substring(el._id.length - 5)
           }
+
+          el.assets.forEach((asset) => {
+            const ty = asset.metadata.Coordinates.y - minY
+            const tx = asset.metadata.Coordinates.x - minX
+            plotData[0].z[ty][tx] = tprice
+            plotData[0].text[ty][tx] = {
+              type: 'cnft',
+              id: el._id,
+              name: asset.assetId,
+              subtype: tsubtype,
+            }
+          })
         })
 
         Plotly.redraw('plot')
@@ -342,6 +357,7 @@ const loadMarketData = function () {
   curSaleTypeListing = saleTypeListing.value
   curSaleTypeOffer = saleTypeOffer.value
   curSaleTypeAuction = saleTypeAuction.value
+  curSaleTypeBundle = saleTypeBundle.value
   curFeatureSmartContract = featureSmartContract.value
 
   resetMarketData()
@@ -624,6 +640,21 @@ onMounted(() => {
             <div class="ml-3 text-sm">
               <label for="open-offers" class="font-medium text-gray-700">
                 Open to offers
+              </label>
+            </div>
+          </div>
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input
+                v-model="saleTypeBundle"
+                name="bundled"
+                type="checkbox"
+                class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+              />
+            </div>
+            <div class="ml-3 text-sm">
+              <label for="bundled" class="font-medium text-gray-700">
+                Bundled
               </label>
             </div>
           </div>
